@@ -5,25 +5,35 @@ require("dotenv").config();
 
 const app = express();
 
-// boiler-plate for using socketio in our application
+// Setup for using socket.io
 const socketio = require("socket.io");
 const server = http.createServer(app);
 const io = socketio(server);
 
-
 app.set("view engine", "ejs");
-// app.set(express.static(path.join(__dirname, "public")));
-app.use('/public', express.static('public'));
+app.use("/public", express.static(path.join(__dirname, "public")));
 
+io.on("connection", (socket) => {
+  console.log("A user connected:", socket.id);
 
-io.on("connection", function (socket){
-  console.log("Connected")
-})
+  // Listen for location data from the client
+  socket.on("send-location", (data) => {
+    // Broadcast the location data to all clients
+    io.emit("receive-location", { id: socket.id, ...data });
+  });
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
+    // Optionally, notify other clients that this user has disconnected
+    io.emit("user-disconnected", { id: socket.id });
+  });
+});
 
 app.get("/", (req, res) => {
   res.render("app");
 });
 
-server.listen(process.env.PORT, () => {
-  console.log(`Server is running on port ${process.env.PORT || 3000}`);
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
